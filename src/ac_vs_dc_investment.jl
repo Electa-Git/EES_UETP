@@ -77,7 +77,7 @@ include(joinpath(path, "opf_acdc","build_ac_opf_acdc.jl")) # Define build_ac_opf
 build_ac_opf_acdc!(m_acdc) # Pass the model to the build_ac_opf_acdc! function
 
 # Exercise: Build the TNEP model 
-# You can find the exercise in include(joinpath(path, "tnep_acdc","build_ac_tnep_acdc_exercise.jl"))
+# You can find the exercise in:include(joinpath(path, "tnep_acdc","build_ac_tnep_acdc_exercise.jl"))
 # The solutions are in include(joinpath(path, "tnep_acdc","build_ac_tnep_acdc.jl")) # Define build_ac_opf_acdc! function
 
 #build_ac_tnep_acdc_exercise!(m_acdc_tnep) # Build the AC TNEP part in the ACDC model from the exercise
@@ -133,4 +133,6 @@ end
 
 #Saving figures
 savefig(ac_branches_plot,joinpath(path, "results", "compare_ac_branch_utilization_ac_acdc.png"))
+savefig(gen_plot,joinpath(path, "results", "compare_generators_ac_acdc.png"))
+
 #savefig(dc_branches_plot,joinpath(path, "results", "compare_branch_utilization_ac_acdc.png"))
