@@ -23,9 +23,9 @@ juniper = optimizer_with_attributes(Juniper.Optimizer, "nl_solver" => ipopt, "mi
 ##### Step 1: Import the grid data and initialize the JuMP model
 # Select the MATPOWER case file
 path = pwd()
-case_file_ac = joinpath(path, "opf_ac", "pg", "case67_investment_ac.m")
-case_file_acdc = joinpath(path, "opf_acdc", "pg", "case67_investment_dc.m")
-case_file_acdc_tnep = joinpath(path, "tnep_acdc", "pg", "case67_investment_dc.m")
+case_file_ac = joinpath(path, "opf_ac", "test_cases", "case67_investment_ac.m")
+case_file_acdc = joinpath(path, "opf_acdc", "test_cases", "case67_investment_dc.m")
+case_file_acdc_tnep = joinpath(path, "tnep_acdc", "test_cases", "case67_investment_dc.m")
 
 # For convenience, use the parser of Powermodels to convert the MATPOWER format file to a Julia dictionary
 data_ac = PowerModels.parse_file(case_file_ac)
@@ -210,19 +210,22 @@ function plot_AC_branch_utilization(data, result, label)
     title = "", bar_width = 0.7, color = [:grey70], xtickfont = 2)
 end
 
-function compare_branch_utilization(data, result_1, result_2, label_1, label_2)
-    br_utilization_1 = [abs(result_1["solution"]["branch"]["$br_id"]["pf"])/data["branch"]["$br_id"]["rate_a"]*100 for br_id in 1:length(data["branch"])]
-    br_utilization_2 = [abs(result_2["solution"]["branch"]["$br_id"]["pf"])/data["branch"]["$br_id"]["rate_a"]*100 for br_id in 1:length(data["branch"])]
+function compare_branch_utilization(data, result_1, result_2, label_1, label_2, n_branches)
+    br_utilization_1 = [abs(result_1["solution"]["branch"]["$br_id"]["pf"])/data["branch"]["$br_id"]["rate_a"]*100 for br_id in 1:n_branches]
+    br_utilization_2 = [abs(result_2["solution"]["branch"]["$br_id"]["pf"])/data["branch"]["$br_id"]["rate_a"]*100 for br_id in 1:n_branches]
     
-    sx = repeat(["$label_1","$label_2"], inner = length(data["branch"]))
-    number = collect(1:length(data["branch"]))
+    sx = repeat(["$label_1","$label_2"], inner = n_branches)
+    number = collect(1:n_branches)
     numbers = vcat(number, number)
     br_utilization = vcat(br_utilization_1, br_utilization_2)
 
-    groupedbar(numbers, br_utilization, group = sx, ylabel = "Branch utilization [%]", xlabel = "AC branch number", xticks = 1:1:length(data["branch"]), yticks = 0:20:100, ylims = (0,101), xlims = (0.5,length(data["branch"])+0.5),
-    title = "", bar_width = 0.7, color = [:grey40 :grey70], xtickfont = 2)
+    groupedbar(numbers, br_utilization, group = sx, ylabel = "Branch utilization [%]", xlabel = "AC branch number", xticks = 1:1:n_branches, yticks = 0:20:100, ylims = (0,101), xlims = (0.5,n_branches+0.5),
+    title = "", bar_width = 0.7, color = [:grey40 :grey70], xtickfont = 3, grid = :none)
 end
-compare_branch_utilization(data_acdc, result_ac_dict, result_ac_dc_dict, "AC OPF", "ACDC OPF")
+
+compare_branch_utilization(data_acdc, result_ac_dict, result_ac_dc_dict, "AC OPF", "ACDC OPF",length(data_acdc["branch"]))
+
+
 
 function plot_DC_branch_utilization(data, result, label)
     br_utilization = [abs(result["solution"]["branchdc"]["$br_id"]["pf"])/(data["branchdc"]["$br_id"]["rateA"]/data["baseMVA"])*100 for br_id in 1:length(data["branchdc"])]
@@ -232,7 +235,7 @@ function plot_DC_branch_utilization(data, result, label)
     #name = vcat(name_try, )
 
     groupedbar(number, br_utilization, group = sx, ylabel = "DC branch utilization [%]", xlabel = "DC branch number", xticks = 1:1:length(data["branchdc"]), yticks = 0:20:100, ylims = (0,101), xlims = (0.5,length(data["branchdc"])+0.5),
-    title = "", bar_width = 0.7, color = [:grey70], xtickfont = 2)
+    title = "", bar_width = 0.7, color = [:grey70], xtickfont = 2, grid = :none)
 end
 plot_DC_branch_utilization(data_acdc, result_ac_dc_dict, "ACDC OPF")
 
@@ -247,6 +250,46 @@ function compare_DC_branch_utilization(data, result_1, result_2, label_1, label_
     br_utilization = vcat(br_utilization_1, br_utilization_2)
 
     groupedbar(numbers, br_utilization, group = sx, ylabel = "DC branch utilization [%]", xlabel = "DC branch number", xticks = 1:1:length(data["branchdc"]), yticks = 0:20:100, ylims = (0,101), xlims = (0.5,length(data["branchdc"])+0.5),
-    title = "", bar_width = 0.7, color = [:grey40 :grey70], xtickfont = 2)
+    title = "", bar_width = 0.7, color = [:grey40 :grey70], xtickfont = 8, grid = :none)
 end
 compare_DC_branch_utilization(data_acdc, result_ac_dc_dict, result_ac_dc_tnep_dict, "ACDC OPF", "ACDC TNEP")
+
+for (br_id,br) in data_acdc["branchdc"]
+    println("DC Branch $br_id: f_bus $(br["fbusdc"]), t_bus $(br["tbusdc"]), rateA $(br["rateA"]) MW, power TNEP: $(abs(result_ac_dc_tnep_dict["solution"]["branchdc"]["$br_id"]["pf"])*data_acdc["baseMVA"]) MW")
+end
+
+
+
+function compare_converter_setpoints(data_1, data_2, result_1, result_2, label_1, label_2)
+    cv_utilization_1 = [abs(result_1["solution"]["convdc"]["$br_id"]["conv_p_ac_grid"])/(data_1["convdc"]["$br_id"]["Pacmax"]/data_1["baseMVA"])*100 for br_id in 1:length(data_1["convdc"])]
+    cv_utilization_2 = [abs(result_2["solution"]["convdc"]["$br_id"]["conv_p_ac_grid"])/(data_2["convdc"]["$br_id"]["Pacmax"]/data_2["baseMVA"])*100 for br_id in 1:length(data_2["convdc"])]
+    for (br_id,br) in data_2["convdc_cand"]
+        push!(cv_utilization_1, 0.0)
+        push!(cv_utilization_2, abs(result_2["solution"]["convdc"]["$br_id"]["conv_p_ac_grid"])/(data_2["convdc_cand"]["$br_id"]["Pacrated"]/data_2["baseMVA"])*100)
+    end
+
+    sx = repeat(["$label_1","$label_2"], inner = length(cv_utilization_1))
+    number = collect(1:length(cv_utilization_1))
+    numbers = vcat(number, number)
+    cv_utilization = vcat(cv_utilization_1, cv_utilization_2)
+
+    #println(sum(cv_utilization_1[length(data_1["convdc"])]))
+    #println(sum(cv_utilization_2[length(data_1["convdc"])]))
+
+
+    xlabels = []
+    for (cv_id,cv) in data_1["convdc"]
+        push!(xlabels, "C$cv_id - Bus $(cv["busac_i"])")
+    end
+    for (cv_id,cv) in data_2["convdc_cand"]
+        push!(xlabels, "Cand$cv_id - Bus $(cv["busac_i"])")
+    end
+    println(xlabels)
+
+    groupedbar(numbers, cv_utilization, group = sx, ylabel = "Converter utilization [%]", xlabel = "DC converter", xticks = (1:1:length(cv_utilization_1),xlabels), yticks = 0:20:100, ylims = (0,101), xlims = (0.5,length(cv_utilization_1)+0.5),
+    title = "", bar_width = 0.7, color = [:grey40 :grey70], xtickfont = 5, grid = :none)
+end
+compare_converter_setpoints(data_acdc, data_acdc_tnep, result_ac_dc_dict, result_ac_dc_tnep_dict, "ACDC OPF", "ACDC TNEP")
+
+###### 
+#Saving figures
