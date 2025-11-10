@@ -1,4 +1,4 @@
-function build_ac_tnep_acdc!(m::Model)
+function build_ac_tnep_acdc_exercise!(m::Model)
     # This function builds the polar form of a nonlinear AC power flow formulation
 
     # Create m.ext entries "variables", "expressions" and "constraints"
@@ -27,24 +27,26 @@ function build_ac_tnep_acdc!(m::Model)
 
     # DC network
     CV = m.ext[:sets][:CV]
-    CV_cand = m.ext[:sets][:CV_cand]
     ND = m.ext[:sets][:ND]
     BD = m.ext[:sets][:BD]
     ND_arcs = m.ext[:sets][:ND_arcs]
-    ND_arcs_cand = m.ext[:sets][:ND_arcs_cand]
     CV_arcs = m.ext[:sets][:CV_arcs]   
-    CV_cand_arcs = m.ext[:sets][:CV_cand_arcs]   
     BD_dc_fr = m.ext[:sets][:BD_dc_fr]
     BD_dc_to = m.ext[:sets][:BD_dc_to]
     BD_dc = m.ext[:sets][:BD_dc]
+    busdc_ij = m.ext[:sets][:busdc_ij]
+    busdc_ji = m.ext[:sets][:busdc_ji]
+
+    # TNEP - related sets
+    #=
+    CV_cand = m.ext[:sets][:CV_cand]
+    ND_arcs_cand = m.ext[:sets][:ND_arcs_cand]
+    CV_cand_arcs = m.ext[:sets][:CV_cand_arcs]   
     BD_cand = m.ext[:sets][:BD_cand]
     BD_dc_cand = m.ext[:sets][:BD_dc_cand]
     BD_dc_cand_fr = m.ext[:sets][:BD_dc_cand_fr]
     BD_dc_cand_to = m.ext[:sets][:BD_dc_cand_to]
- 
-    println(BD_dc_cand)
-    busdc_ij = m.ext[:sets][:busdc_ij]
-    busdc_ji = m.ext[:sets][:busdc_ji]
+    =#
 
     # Extract parameters
     # AC network
@@ -123,6 +125,8 @@ function build_ac_tnep_acdc!(m::Model)
     conv_is_pr = m.ext[:parameters][:convdc][:is_pr]
     conv_is_filter = m.ext[:parameters][:convdc][:is_filter]
 
+    # Converter candidates -> uploading parameter values
+    #=
     conv_busdc_cand = m.ext[:parameters][:convdc_cand][:busdc]
     conv_bus_cand = m.ext[:parameters][:convdc_cand][:bus]
     conv_status_cand = m.ext[:parameters][:convdc_cand][:status]
@@ -157,7 +161,7 @@ function build_ac_tnep_acdc!(m::Model)
     conv_is_pr_cand = m.ext[:parameters][:convdc_cand][:is_pr]
     conv_is_filter_cand = m.ext[:parameters][:convdc_cand][:is_filter]
     inv_cost_cv_cand = m.ext[:parameters][:convdc_cand][:inv_cost]
-
+    =#
 
     # DC branches
     brdc_rate_a = m.ext[:parameters][:branchdc][:rate_a]
@@ -169,12 +173,15 @@ function build_ac_tnep_acdc!(m::Model)
     brdc_l = m.ext[:parameters][:branchdc][:l]
     brdc_dcpoles = m.ext[:parameters][:branchdc][:dcpoles]
     
+    # DC branches candidates -> uploading parameter values
+    #=
     brdc_rate_a_cand = m.ext[:parameters][:branchdc_cand][:rate_a]
     brdc_r_cand = m.ext[:parameters][:branchdc_cand][:r]
     brdc_g_cand = m.ext[:parameters][:branchdc_cand][:g]
     brdc_l_cand = m.ext[:parameters][:branchdc_cand][:l]
     inv_cost_brdc_cand = m.ext[:parameters][:branchdc_cand][:inv_cost]
     brdc_dcpoles_cand = m.ext[:parameters][:branchdc_cand][:dcpoles]
+    =#
 
     ##### Create variables 
     # AC components
@@ -205,8 +212,10 @@ function build_ac_tnep_acdc!(m::Model)
     conv_p_ac = m.ext[:variables][:conv_p_ac] = @variable(m, [cv=CV], lower_bound=conv_p_ac_min[cv], upper_bound=conv_p_ac_max[cv], base_name="conv_p_ac") # converter active power
     conv_q_ac = m.ext[:variables][:conv_q_ac] = @variable(m, [cv=CV], lower_bound=conv_q_ac_min[cv], upper_bound=conv_q_ac_max[cv], base_name="conv_q_ac") # converter reactive power
     conv_p_dc = m.ext[:variables][:conv_p_dc] = @variable(m, [cv=CV], lower_bound=conv_p_dc_min[cv], upper_bound=conv_p_dc_max[cv], base_name="conv_p_dc") # converter active power
+  
     conv_im = m.ext[:variables][:conv_im] = @variable(m, [cv=CV], lower_bound = 0,
                             upper_bound = conv_i_max[cv], base_name="conv_im") # converter ac-side current
+
 
     # conv_im = m.ext[:variables][:conv_im] = @variable(m, [cv=CV], lower_bound = 0, base_name="conv_im") # converter ac-side current
     conv_im_dc = m.ext[:variables][:conv_im_dc] = @variable(m, [cv=CV], base_name="conv_im_dc") # converter dc-side current
@@ -226,59 +235,31 @@ function build_ac_tnep_acdc!(m::Model)
     conv_vm = m.ext[:variables][:conv_vm] = @variable(m, [cv=CV], lower_bound=conv_vm_min[cv], upper_bound=conv_vm_max[cv], base_name="conv_vm")
     conv_va = m.ext[:variables][:conv_va] = @variable(m, [cv=CV], lower_bound=-2*pi, upper_bound=2*pi, base_name="conv_va")
 
-
-    conv_p_ac_cand = m.ext[:variables][:conv_p_ac_cand] = @variable(m, [cv=CV_cand], lower_bound=conv_p_ac_min_cand[cv], upper_bound=conv_p_ac_max_cand[cv], base_name="conv_p_ac_cand") # converter active power
-    conv_q_ac_cand = m.ext[:variables][:conv_q_ac_cand] = @variable(m, [cv=CV_cand], lower_bound=conv_q_ac_min_cand[cv], upper_bound=conv_q_ac_max_cand[cv], base_name="conv_q_ac_cand") # converter reactive power
-    conv_p_dc_cand = m.ext[:variables][:conv_p_dc_cand] = @variable(m, [cv=CV_cand], lower_bound=conv_p_dc_min_cand[cv], upper_bound=conv_p_dc_max_cand[cv], base_name="conv_p_dc_cand") # converter active power for candidate dc lines
-    conv_p_cand_bin = m.ext[:variables][:conv_p_cand_bin] = @variable(m, [cv=CV_cand], Bin, base_name="conv_p_cand_bin") # converter active power for candidate dc lines
-
-    conv_im_cand = m.ext[:variables][:conv_im_cand] = @variable(m, [cv=CV_cand], lower_bound = 0,
-    upper_bound = conv_i_max_cand[cv], base_name="conv_im_cand") # converter ac-side current
-
-    conv_im_dc_cand = m.ext[:variables][:conv_im_dc_cand] = @variable(m, [cv=CV_cand], base_name="conv_im_dc") # converter dc-side current
-    conv_p_ac_grid_cand = m.ext[:variables][:conv_p_ac_grid_cand] = @variable(m, [cv=CV_cand], lower_bound=power_scale*conv_p_ac_min_cand[cv], upper_bound=power_scale*conv_p_ac_max_cand[cv], base_name="conv_p_ac_grid_cand") # converter active power to the grid
-    conv_q_ac_grid_cand = m.ext[:variables][:conv_q_ac_grid_cand] = @variable(m, [cv=CV_cand], lower_bound=power_scale*conv_q_ac_min_cand[cv], upper_bound=power_scale*conv_q_ac_max_cand[cv], base_name="conv_q_ac_grid_cand") # converter reactive power to the grid
-    conv_tf_p_cie_cand = m.ext[:variables][:conv_tf_p_cie_cand] = @variable(m, [cv=CV_cand],   lower_bound=power_scale*conv_p_ac_min_cand[cv], upper_bound=power_scale*conv_p_ac_max_cand[cv], base_name="conv_tf_p_cie_cand")
-    conv_tf_q_cie_cand = m.ext[:variables][:conv_tf_q_cie_cand] = @variable(m, [cv=CV_cand],   lower_bound=power_scale*conv_q_ac_min_cand[cv], upper_bound=power_scale*conv_q_ac_max_cand[cv], base_name="conv_tf_q_cie_cand")
-    conv_tf_p_cei_cand = m.ext[:variables][:conv_tf_p_cei_cand] = @variable(m, [cv=CV_cand],   lower_bound=power_scale*conv_p_ac_min_cand[cv], upper_bound=power_scale*conv_p_ac_max_cand[cv], base_name="conv_tf_p_cei_cand")
-    conv_tf_q_cei_cand = m.ext[:variables][:conv_tf_q_cei_cand] = @variable(m, [cv=CV_cand],   lower_bound=power_scale*conv_q_ac_min_cand[cv], upper_bound=power_scale*conv_q_ac_max_cand[cv], base_name="conv_tf_q_cei_cand")
-    conv_pr_p_cie_cand = m.ext[:variables][:conv_pr_p_cie_cand] = @variable(m, [cv=CV_cand],   lower_bound=power_scale*conv_p_ac_min_cand[cv], upper_bound=power_scale*conv_p_ac_max_cand[cv], base_name="conv_pr_p_cie_cand")
-    conv_pr_q_cie_cand = m.ext[:variables][:conv_pr_q_cie_cand] = @variable(m, [cv=CV_cand],   lower_bound=power_scale*conv_q_ac_min_cand[cv], upper_bound=power_scale*conv_q_ac_max_cand[cv], base_name="conv_pr_q_cie_cand")
-    conv_pr_p_cei_cand = m.ext[:variables][:conv_pr_p_cei_cand] = @variable(m, [cv=CV_cand],   lower_bound=power_scale*conv_p_ac_min_cand[cv], upper_bound=power_scale*conv_p_ac_max_cand[cv], base_name="conv_pr_p_cei_cand")
-    conv_pr_q_cei_cand = m.ext[:variables][:conv_pr_q_cei_cand] = @variable(m, [cv=CV_cand],   lower_bound=power_scale*conv_q_ac_min_cand[cv], upper_bound=power_scale*conv_q_ac_max_cand[cv], base_name="conv_pr_q_cei_cand")
-    conv_vm_f_cand = m.ext[:variables][:conv_vm_f_cand] = @variable(m, lower_bound=0.9/1.2, upper_bound=1.1*1.2, [cv=CV_cand], base_name="conv_vm_f_cand")
-    conv_va_f_cand = m.ext[:variables][:conv_va_f_cand] = @variable(m, lower_bound=-2*pi, upper_bound=2*pi, [cv=CV_cand], base_name="conv_va_f_cand")
-    conv_vm_cand = m.ext[:variables][:conv_vm_cand] = @variable(m, [cv=CV_cand], lower_bound=conv_vm_min[cv], upper_bound=conv_vm_max[cv], base_name="conv_vm_cand")
-    conv_va_cand = m.ext[:variables][:conv_va_cand] = @variable(m, [cv=CV_cand], lower_bound=-2*pi, upper_bound=2*pi, base_name="conv_va_cand")
-
+    # Converter candidates
+    # Tip: One binary variable per candidate converter
+    # Tip: CV_cand is the set for candidate converters
+    #...
 
     ##### Objective
+    # Tip: need to include investment costs for candidate branches and converters
     max_gen_ncost = m.ext[:parameters][:gen_max_ncost]
     if max_gen_ncost == 1
         m.ext[:objective] = @objective(m, Min,
                 sum(gen_cost[g][1] for g in G) 
-                + sum(inv_cost_brdc_cand[(d,e,f)]*brdc_p_cand_bin[(d,e,f)] for (d,e,f) in BD_dc_cand_fr)
-                + sum(inv_cost_cv_cand[cv_cand]*conv_p_cand_bin[cv_cand] for cv_cand in CV_cand)
         )
     elseif max_gen_ncost == 2
         m.ext[:objective] = @objective(m, Min,
             sum(gen_cost[g][1]*pg[g] + gen_cost[g][2] for g in G)
-            + sum(inv_cost_brdc_cand[d]*brdc_p_cand_bin[(d,e,f)] for (d,e,f) in BD_dc_cand_fr)
-            + sum(inv_cost_cv_cand[cv_cand]*conv_p_cand_bin[cv_cand] for cv_cand in CV_cand)
         )
     elseif max_gen_ncost == 3
         m.ext[:objective] = @objective(m, Min,
                 sum(gen_cost[g][1]*pg[g]^2 + gen_cost[g][2]*pg[g] + gen_cost[g][3]
                         for g in G)
-            + sum(inv_cost_brdc_cand[(d,e,f)]*brdc_p_cand_bin[(d,e,f)] for (d,e,f) in BD_dc_cand_fr)
-            + sum(inv_cost_cv_cand[cv_cand]*conv_p_cand_bin[cv_cand] for cv_cand in CV_cand)
         )
     elseif max_gen_ncost == 4
         m.ext[:objective] = @objective(m, Min,
                 sum(gen_cost[g][1]*pg[g]^3 + gen_cost[g][2]*pg[g]^2 + gen_cost[g][3]*pg[g] + gen_cost[g][4]
                         for g in G)
-            + sum(inv_cost_brdc_cand[(d,e,f)]*brdc_p_cand_bin[(d,e,f)] for (d,e,f) in BD_dc_cand_fr)
-            + sum(inv_cost_cv_cand[cv_cand]*conv_p_cand_bin[cv_cand] for cv_cand in CV_cand)
         )
     end
 
@@ -468,7 +449,7 @@ function build_ac_tnep_acdc!(m::Model)
     )
 
 
-    # Converter station power flow constraints - candidates
+    # Converter station power flow constraints - candidates -> constraints to be added here
     # Transformer
     m.ext[:constraints][:p_grid_tf_cand] = Dict()
     m.ext[:constraints][:q_grid_tf_cand] = Dict()
@@ -478,55 +459,7 @@ function build_ac_tnep_acdc!(m::Model)
     m.ext[:constraints][:q_tf_cei_cand] = Dict()
 
     for cv in CV_cand
-        if conv_is_tf_cand[cv] == 0
-            m.ext[:constraints][:p_grid_tf_cand][cv] = @constraint(m, 
-                conv_p_ac_grid[cv] - conv_tf_p_cie[cv] == 0
-            ) 
-            m.ext[:constraints][:q_grid_tf_cand][cv] = @constraint(m, 
-                conv_q_ac_grid[cv] - conv_tf_q_cie[cv] == 0 
-            ) 
-            m.ext[:constraints][:p_tf_cie_cand][cv] = @constraint(m, 
-                conv_tf_p_cie[cv] + conv_tf_p_cei[cv] == 0
-            ) 
-            m.ext[:constraints][:q_tf_cie_cand][cv] = @constraint(m, 
-                conv_tf_q_cie[cv] + conv_tf_q_cei[cv] == 0 
-            ) 
-            @constraint(m, 
-                vm[conv_bus[cv]] == conv_vm_f_cand[cv])
-            @constraint(m, 
-                va[conv_bus[cv]] == conv_va_f_cand[cv])
-        else
-            m.ext[:constraints][:p_grid_tf_cand][cv] = @constraint(m, 
-                conv_p_ac_grid_cand[cv] - conv_tf_p_cie_cand[cv] == 0
-            ) 
-            m.ext[:constraints][:q_grid_tf_cand][cv] = @constraint(m, 
-                conv_q_ac_grid_cand[cv] - conv_tf_q_cie_cand[cv] == 0 
-            ) 
-            m.ext[:constraints][:p_tf_cie_cand][cv] = @constraint(m, 
-                conv_tf_p_cie_cand[cv] == 
-                (conv_tf_g_cand[cv])*(vm[conv_bus[cv]]/conv_tf_tap_cand[cv])^2
-                -(conv_tf_g_cand[cv] * (vm[conv_bus[cv]]/conv_tf_tap_cand[cv]) * conv_vm_f_cand[cv] * cos(va[conv_bus[cv]] - conv_va_f_cand[cv]))
-                -(conv_tf_b_cand[cv] * (vm[conv_bus[cv]]/conv_tf_tap_cand[cv]) * conv_vm_f_cand[cv] * sin(va[conv_bus[cv]] - conv_va_f_cand[cv]))
-            ) 
-            m.ext[:constraints][:q_tf_cie_cand][cv] = @constraint(m, 
-                conv_tf_q_cie_cand[cv] == 
-                -(conv_tf_b_cand[cv])*(vm[conv_bus[cv]]/conv_tf_tap_cand[cv])^2
-                +(conv_tf_b_cand[cv] * (vm[conv_bus[cv]]/conv_tf_tap_cand[cv]) * conv_vm_f_cand[cv] * cos(va[conv_bus[cv]] - conv_va_f_cand[cv]))
-                -(conv_tf_g_cand[cv] * (vm[conv_bus[cv]]/conv_tf_tap_cand[cv]) * conv_vm_f_cand[cv] * sin(va[conv_bus[cv]] - conv_va_f_cand[cv]))
-            ) 
-            m.ext[:constraints][:p_tf_cei_cand][cv] = @constraint(m, 
-                conv_tf_p_cei_cand[cv] == 
-                (conv_tf_g_cand[cv])*(conv_vm_f_cand[cv])^2
-                -(conv_tf_g_cand[cv] * (vm[conv_bus[cv]]/conv_tf_tap_cand[cv]) * conv_vm_f_cand[cv] * cos(conv_va_f_cand[cv] - va[conv_bus[cv]]))
-                -(conv_tf_b_cand[cv] * (vm[conv_bus[cv]]/conv_tf_tap_cand[cv]) * conv_vm_f_cand[cv] * sin(conv_va_f_cand[cv] - va[conv_bus[cv]]))
-            ) 
-            m.ext[:constraints][:q_tf_cei_cand][cv] = @constraint(m, 
-                conv_tf_q_cei_cand[cv] == 
-                -(conv_tf_b_cand[cv])*(conv_vm_f_cand[cv])^2
-                -(conv_tf_g_cand[cv] * (vm[conv_bus[cv]]/conv_tf_tap_cand[cv]) * conv_vm_f_cand[cv] * sin(conv_va_f_cand[cv] - va[conv_bus[cv]]))
-                +(conv_tf_b_cand[cv] * (vm[conv_bus[cv]]/conv_tf_tap_cand[cv]) * conv_vm_f_cand[cv] * cos(conv_va_f_cand[cv] - va[conv_bus[cv]]))
-            ) 
-        end
+        # ... to be completed
     end
     # Filter
     # Phase reactor
@@ -540,77 +473,11 @@ function build_ac_tnep_acdc!(m::Model)
     m.ext[:constraints][:q_pr_conv_cand] = Dict()
 
     for cv in CV_cand
-        if conv_is_filter_cand[cv] == 0
-            m.ext[:constraints][:q_tf_pr_cand][cv] = @constraint(m, 
-                conv_tf_q_cei_cand[cv] + conv_pr_q_cie_cand[cv] == 0
-            ) 
-        elseif conv_is_filter_cand[cv] == 1
-            m.ext[:constraints][:q_tf_pr_cand][cv] = @constraint(m, 
-                conv_tf_q_cei_cand[cv] + conv_pr_q_cie_cand[cv] - conv_b_f_cand[cv]*(conv_vm_f_cand[cv])^2  == 0
-            ) 
-        end
-        if conv_is_pr_cand[cv] == 0
-            m.ext[:constraints][:p_tf_pr_cand][cv] = @constraint(m, 
-                conv_tf_p_cei_cand[cv] + conv_pr_p_cie_cand[cv] == 0
-            ) 
-            m.ext[:constraints][:p_pr_cie_cand][cv] = @constraint(m, 
-                conv_pr_p_cei_cand[cv] + conv_pr_p_cie_cand[cv] == 0
-            ) 
-            m.ext[:constraints][:q_pr_cie_cand][cv] = @constraint(m, 
-                conv_pr_q_cei_cand[cv] + conv_pr_q_cie_cand[cv] == 0
-            ) 
-            m.ext[:constraints][:p_pr_cei_cand][cv] = @constraint(m, 
-                conv_p_ac_cand[cv] + conv_pr_p_cei_cand[cv] == 0
-            ) 
-            m.ext[:constraints][:q_pr_cei_cand][cv] = @constraint(m, 
-                conv_q_ac_cand[cv] + conv_pr_q_cei_cand[cv] == 0
-            ) 
-            @constraint(m, 
-                conv_vm_cand[cv] == conv_vm_f_cand[cv])
-            @constraint(m, 
-                conv_va_cand[cv] == conv_va_f_cand[cv])
-        else
-            m.ext[:constraints][:p_tf_pr_cand][cv] = @constraint(m, 
-                conv_tf_p_cei_cand[cv] + conv_pr_p_cie_cand[cv] == 0
-            ) 
-            m.ext[:constraints][:p_pr_cie_cand][cv] = @constraint(m, 
-                conv_pr_p_cie_cand[cv] == 
-                (conv_pr_g_cand[cv])*(conv_vm_f_cand[cv])^2
-                -(conv_pr_g_cand[cv] * (conv_vm_cand[cv]) * conv_vm_f_cand[cv] * cos(conv_va_f_cand[cv] - conv_va_cand[cv]))
-                -(conv_pr_b_cand[cv] * (conv_vm_cand[cv]) * conv_vm_f_cand[cv] * sin(conv_va_f_cand[cv] - conv_va_cand[cv]))
-            ) 
-            m.ext[:constraints][:q_pr_cie_cand][cv] = @constraint(m, 
-                conv_pr_q_cie_cand[cv] == 
-                -(conv_pr_b_cand[cv])*(conv_vm_f_cand[cv])^2
-                +(conv_pr_b_cand[cv] * (conv_vm_cand[cv]) * conv_vm_f_cand[cv] * cos(conv_va_f_cand[cv] - conv_va_cand[cv]))
-                -(conv_pr_g_cand[cv] * (conv_vm_cand[cv]) * conv_vm_f_cand[cv] * sin(conv_va_f_cand[cv] - conv_va_cand[cv]))
-            ) 
-            m.ext[:constraints][:p_pr_cei_cand][cv] = @constraint(m, 
-                conv_pr_p_cei_cand[cv] == 
-                (conv_pr_g_cand[cv])*(conv_vm_cand[cv])^2
-                -(conv_pr_g_cand[cv] * (conv_vm_cand[cv]) * conv_vm_f_cand[cv] * cos(conv_va_cand[cv] - conv_va_f_cand[cv]))
-                -(conv_pr_b_cand[cv] * (conv_vm_cand[cv]) * conv_vm_f_cand[cv] * sin(conv_va_cand[cv] - conv_va_f_cand[cv]))
-            ) 
-            m.ext[:constraints][:q_pr_cei_cand][cv] = @constraint(m, 
-                conv_pr_q_cei_cand[cv] == 
-                -(conv_pr_b_cand[cv])*(conv_vm_cand[cv])^2
-                +(conv_pr_b_cand[cv] * (conv_vm_cand[cv]) * conv_vm_f_cand[cv] * cos(conv_va_cand[cv] - conv_va_f_cand[cv]))
-                -(conv_pr_g_cand[cv] * (conv_vm_cand[cv]) * conv_vm_f_cand[cv] * sin(conv_va_cand[cv] - conv_va_f_cand[cv]))
-            ) 
-            m.ext[:constraints][:p_pr_conv_cand][cv] = @constraint(m, 
-                conv_p_ac_cand[cv] + conv_pr_p_cei_cand[cv] == 0
-            ) 
-            m.ext[:constraints][:q_pr_conv_cand][cv] = @constraint(m, 
-                conv_q_ac_cand[cv] + conv_pr_q_cei_cand[cv] == 0
-            ) 
-        end
+        # ... to be completed
     end
 
     # Converter AC-side converter power - Constraint converter current - candidates
-    m.ext[:constraints][:conv_p_ac_cand] = @constraint(m, [cv=CV_cand],
-        conv_p_ac_cand[cv]^2 + conv_q_ac_cand[cv]^2 == conv_vm_cand[cv]^2 * conv_im_cand[cv]^2
-    )
-
+    # ... to be completed
 
 
     # DC grid
@@ -629,18 +496,7 @@ function build_ac_tnep_acdc!(m::Model)
     )
 
     # DC grid power flow model for candidate branches 
-    m.ext[:constraints][:p_dc_def_cand] = @constraint(m, [(d,e,f)=BD_dc_cand_fr],
-        brdc_p_cand[(d,e,f)] == brdc_dcpoles[d]*brdc_g[d]*busdc_vm[e]*(busdc_vm[e]-busdc_vm[f])*brdc_p_cand_bin[(d,e,f)]
-    )
-    m.ext[:constraints][:p_dc_dfe_cand] = @constraint(m, [(d,f,e)=BD_dc_cand_to],
-        brdc_p_cand[(d,f,e)] == brdc_dcpoles[d]*brdc_g[d]*busdc_vm[f]*(busdc_vm[f]-busdc_vm[e])*brdc_p_cand_bin[(d,e,f)]
-    )
-    m.ext[:expressions][:p_dc_def_cand] = @expression(m, [(d,e,f)=BD_dc_cand_fr],
-        brdc_dcpoles[d]*brdc_g[d]*busdc_vm[e]*(busdc_vm[e]-busdc_vm[f])*brdc_p_cand_bin[(d,e,f)]
-    )
-    m.ext[:expressions][:p_dc_dfe_cand] = @expression(m, [(d,f,e)=BD_dc_cand_to],
-        brdc_dcpoles[d]*brdc_g[d]*busdc_vm[f]*(busdc_vm[f]-busdc_vm[e])*brdc_p_cand_bin[(d,e,f)]
-    )
+    # ... to be completed
 
     # Converter constraints 
     # AC and DC side link via converter losses
@@ -653,37 +509,35 @@ function build_ac_tnep_acdc!(m::Model)
 
     # Converter constraints - candidates
     # AC and DC side link via converter losses
-    m.ext[:constraints][:conv_p_ac_dc_cand] = @constraint(m, [cv=CV_cand],
-    conv_p_ac[cv] + conv_p_dc[cv] == (conv_loss_a[cv] + conv_loss_b[cv]*conv_im[cv] + conv_loss_c_inv[cv]*conv_im[cv]^2)
-    )
-    m.ext[:expressions][:conv_p_loss_cand] = @expression(m, [cv=CV_cand],
-        conv_p_ac[cv] + conv_p_dc[cv]
-    )
+    # ... to be completed
 
-    # Nodal power balance AC - Active power 
+    # Nodal power balance AC - Active power & Reactive power
+    # Tip: Make sure to include both existing and candidate converters in the balance
+
+    # Example from OPF:
     m.ext[:constraints][:nodal_p_ac_balance] = @constraint(m, [n=N],
         sum(pg[g] for g in G if gen_bus[g] == n)
         - sum(conv_p_ac_grid[cv] for cv in CV if conv_bus[cv] == n)
-        - sum(conv_p_cand_bin[cv_cand]*conv_p_ac_grid_cand[cv_cand] for cv_cand in CV_cand if conv_bus_cand[cv_cand] == n)
         - sum(pb[(br,i,j)] for (br,i,j) in B_arcs[n])
         - sum(pd[l] for l in L if load_bus[l] == n)
         - sum(gs[shunt_bus[s]]*vm[n]^2 for s in S if shunt_bus[s] == ma)
         == 0)
 
-    # Nodal power balance AC - Reactive power 
     m.ext[:constraints][:nodal_q_ac_balance] = @constraint(m, [n=N],
         sum(qg[g] for g in G if gen_bus[g] == n)
         - sum(conv_q_ac_grid[cv] for cv in CV if conv_bus[cv] == n)
-        - sum(conv_p_cand_bin[cv_cand]*conv_q_ac_grid_cand[cv_cand] for cv_cand in CV_cand if conv_bus_cand[cv_cand] == n)
         - sum(qb[(br,i,j)] for (br,i,j) in B_arcs[n])
         - sum(qd[l] for l in L if load_bus[l] == n)
         + sum(bs[shunt_bus[s]]*vm[n]^2 for s in S if shunt_bus[sh] == n)
         == 0)
     
+
     # Nodal power balance DC
+    # Tip: Make sure to include both existing and candidate converters in the balance
+
+    # Example from OPF:
     m.ext[:constraints][:nodal_p_dc_balance] = @constraint(m, [nd=ND],
         - sum(conv_p_dc[cv] for cv in CV if conv_busdc[cv] == nd) 
-        - sum(conv_p_cand_bin[cv_cand]*conv_p_dc_cand[cv_cand] for cv_cand in CV_cand if conv_busdc_cand[cv_cand] == nd)
         - sum(brdc_p[(d,f,e)] for (d,f,e) in ND_arcs[nd])
         - sum(brdc_p_cand[(d,f,e)] for (d,f,e) in ND_arcs_cand[nd])
         == 0)
