@@ -198,6 +198,7 @@ function build_ac_tnep_acdc!(m::Model)
     brdc_p = m.ext[:variables][:brdc_p] = @variable(m, [(d,e,f)=BD_dc], lower_bound=-brdc_rate_a[d], upper_bound=brdc_rate_a[d], base_name="brdc_p")
     brdc_p_loss = m.ext[:variables][:brdc_p_loss] = @variable(m, [(d,e,f)=BD_dc], base_name="brdc_p_loss")
     brdc_p_cand = m.ext[:variables][:brdc_p_cand] = @variable(m, [(d,e,f)=BD_dc_cand], lower_bound=-brdc_rate_a_cand[d], upper_bound=brdc_rate_a_cand[d], base_name="brdc_p_cand")
+
     brdc_p_cand_loss = m.ext[:variables][:brdc_p_cand_loss] = @variable(m, [(d,e,f)=BD_dc_cand_fr], base_name="brdc_p_cand_loss")
     brdc_p_cand_bin = m.ext[:variables][:brdc_p_cand_bin] = @variable(m, [(d,e,f)=BD_dc_cand_fr], Bin, base_name="brdc_p_cand_bin")
 
@@ -230,6 +231,7 @@ function build_ac_tnep_acdc!(m::Model)
     conv_p_ac_cand = m.ext[:variables][:conv_p_ac_cand] = @variable(m, [cv=CV_cand], lower_bound=conv_p_ac_min_cand[cv], upper_bound=conv_p_ac_max_cand[cv], base_name="conv_p_ac_cand") # converter active power
     conv_q_ac_cand = m.ext[:variables][:conv_q_ac_cand] = @variable(m, [cv=CV_cand], lower_bound=conv_q_ac_min_cand[cv], upper_bound=conv_q_ac_max_cand[cv], base_name="conv_q_ac_cand") # converter reactive power
     conv_p_dc_cand = m.ext[:variables][:conv_p_dc_cand] = @variable(m, [cv=CV_cand], lower_bound=conv_p_dc_min_cand[cv], upper_bound=conv_p_dc_max_cand[cv], base_name="conv_p_dc_cand") # converter active power for candidate dc lines
+
     conv_p_cand_bin = m.ext[:variables][:conv_p_cand_bin] = @variable(m, [cv=CV_cand], Bin, base_name="conv_p_cand_bin") # converter active power for candidate dc lines
 
     conv_im_cand = m.ext[:variables][:conv_im_cand] = @variable(m, [cv=CV_cand], lower_bound = 0,
@@ -690,3 +692,4 @@ function build_ac_tnep_acdc!(m::Model)
 
     return m 
 end
+

@@ -26,18 +26,18 @@ juniper = optimizer_with_attributes(Juniper.Optimizer, "nl_solver" => ipopt, "mi
 path = pwd()
 case_file_ac = joinpath(path, "opf_ac", "test_cases", "case67_investment_ac.m")
 case_file_acdc = joinpath(path, "opf_acdc", "test_cases", "case67_investment_dc.m")
-#case_file_acdc_tnep = joinpath(path, "tnep_acdc", "test_cases", "case67_investment_dc.m")
+case_file_acdc_tnep = joinpath(path, "tnep_acdc", "test_cases", "case67_investment_dc.m")
 
 # For convenience, use the parser of Powermodels to convert the MATPOWER format file to a Julia dictionary
 data_ac = PowerModels.parse_file(case_file_ac)
 data_acdc = PowerModels.parse_file(case_file_acdc)
-#data_acdc_tnep = PowerModels.parse_file(case_file_acdc_tnep)
+data_acdc_tnep = PowerModels.parse_file(case_file_acdc_tnep)
 
 # Initialize the JuMP model (an empty JuMP model) with defined solver
 m_ac = Model(ipopt)
 m_acdc = Model(ipopt)
-#m_acdc_tnep = Model(juniper)
-#m_acdc_tnep_exercise = Model(juniper)
+m_acdc_tnep = Model(juniper)
+m_acdc_tnep_exercise = Model(juniper)
 
 ########################
 ##### Step 2: create the JuMP model & pass data to model
@@ -56,7 +56,7 @@ data_acdc_tnep["convdc_cand"] = Dict{String, Any}() # Initialize the dictionary 
 
 include(joinpath(path, "tnep_acdc", "add_candidates.jl")) # Define functions add_dc_branch_cand! and add_dc_converter_cand! to add candidates to the grid
 add_converter_candidate!(data_acdc_tnep, 3, 3, 1000.0, 1.0; zone = nothing, islcc = 0, conv_id = 1, status = 1)
-add_converter_candidate!(data_acdc_tnep, 8, 8, 1000.0, 1.0; zone = nothing, islcc = 0, conv_id = 2, status = 1)
+add_converter_candidate!(data_acdc_tnep, 27, 8, 1000.0, 1.0; zone = nothing, islcc = 0, conv_id = 2, status = 1)
 add_dc_branch_cand!(data_acdc_tnep, 3, 8, 1000.0, 1.0; status = 1, r = 0.1, branch_id = 1)
 
 # Including functions for the exercise
@@ -77,8 +77,10 @@ include(joinpath(path, "opf_acdc","build_ac_opf_acdc.jl")) # Define build_ac_opf
 build_ac_opf_acdc!(m_acdc) # Pass the model to the build_ac_opf_acdc! function
 
 # Exercise: Build the TNEP model 
-# You can find the exercise in:include(joinpath(path, "tnep_acdc","build_ac_tnep_acdc_exercise.jl"))
-# The solutions are in include(joinpath(path, "tnep_acdc","build_ac_tnep_acdc.jl")) # Define build_ac_opf_acdc! function
+# You can find the exercise in:
+#include(joinpath(path, "tnep_acdc","build_ac_tnep_acdc_exercise.jl"))
+# The solutions are in 
+#include(joinpath(path, "tnep_acdc","build_ac_tnep_acdc.jl")) # Define build_ac_opf_acdc! function
 
 #build_ac_tnep_acdc_exercise!(m_acdc_tnep) # Build the AC TNEP part in the ACDC model from the exercise
 #build_ac_tnep_acdc!(m_acdc_tnep) # Build the AC TNEP part in the ACDC model
@@ -117,7 +119,13 @@ include(joinpath(path, "src", "results_functions.jl"))# Define functions to plot
 result_ac_dict = create_results_dictionary(m_ac,data_ac)
 result_ac_dc_dict = create_results_dictionary(m_acdc,data_acdc)
 #result_ac_dc_tnep_dict = create_results_dictionary(m_acdc_tnep,data_acdc_tnep)
-#result_ac_dc_tnep_dict = create_results_dictionary(m_acdc_tnep_exercise,data_acdc_tnep)
+#result_ac_dc_tnep_exercise_dict = create_results_dictionary(m_acdc_tnep_exercise,data_acdc_tnep)
+
+
+# Checking whether candidates are built
+#res_conv_p_ac_cand_bin = value(m_acdc_tnep.ext[:variables][:conv_p_cand_bin])
+#res_brdc_p_cand_bin = value(m_acdc_tnep.ext[:variables][:brdc_p_cand_bin])
+
 
 # Plotting results
 ac_branches_plot = compare_branch_utilization(data_acdc, result_ac_dict, result_ac_dc_dict, "AC OPF", "ACDC OPF",length(data_acdc["branch"]))
